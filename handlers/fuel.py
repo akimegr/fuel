@@ -115,7 +115,7 @@ async def process_fuel_calculation(message: Message, fuel_type: str, liters: flo
     user = await get_or_create_user(message.from_user.id, message.from_user.username)
     
     # Получаем рекомендации
-    recommendations = recommender.get_recommendations(user, liters, fuel_type)
+    recommendations = await recommender.get_recommendations(user, liters, fuel_type)
     
     if "error" in recommendations:
         await message.answer(f"❌ {recommendations['error']}")

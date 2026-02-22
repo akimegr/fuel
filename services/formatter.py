@@ -27,7 +27,10 @@ class MessageFormatter:
         # Вариант А: Максимальная экономия
         text += "🏆 ВАРИАНТ А: МАКСИМАЛЬНАЯ ЭКОНОМИЯ\n"
         text += f"📍 {station_cheapest['network']} {station_cheapest['name']} ({calc_cheapest['distance']:.1f} км)\n"
-        text += f"💰 Цена: {calc_cheapest['base_price']:.2f} → {calc_cheapest['final_price']:.2f} BYN/л с картой\n"
+        text += f"💰 Цена: {calc_cheapest['base_price']:.2f} → {calc_cheapest['final_price']:.2f} BYN/л"
+        if calc_cheapest.get('total_discount_percent', 0) > 0:
+            text += f" (скидка {calc_cheapest['total_discount_percent']:.1f}%)"
+        text += "\n"
         text += f"⏱️ Время в пути: {calc_cheapest['time_minutes']:.0f} мин\n"
         text += f"🛣️ Расход на дорогу: {calc_cheapest['fuel_for_trip']:.1f}л ({calc_cheapest['fuel_cost_for_trip']:.2f} BYN)\n"
         text += f"💸 Полная стоимость: {calc_cheapest['total_cost']:.2f} BYN\n"
@@ -39,7 +42,10 @@ class MessageFormatter:
         # Вариант Б: Близкая и выгодная
         text += "⚖️ ВАРИАНТ Б: БЛИЗКАЯ И ВЫГОДНАЯ\n"
         text += f"📍 {station_best['network']} {station_best['name']} ({calc_best['distance']:.1f} км)\n"
-        text += f"💰 Цена: {calc_best['base_price']:.2f} → {calc_best['final_price']:.2f} BYN/л\n"
+        text += f"💰 Цена: {calc_best['base_price']:.2f} → {calc_best['final_price']:.2f} BYN/л"
+        if calc_best.get('total_discount_percent', 0) > 0:
+            text += f" (скидка {calc_best['total_discount_percent']:.1f}%)"
+        text += "\n"
         text += f"⏱️ Время в пути: {calc_best['time_minutes']:.0f} мин\n"
         text += f"🛣️ Расход на дорогу: {calc_best['fuel_for_trip']:.1f}л ({calc_best['fuel_cost_for_trip']:.2f} BYN)\n"
         text += f"💸 Полная стоимость: {calc_best['total_cost']:.2f} BYN\n"
@@ -79,7 +85,10 @@ class MessageFormatter:
             text += f"💡 Оптимальный вариант для путешествий\n\n"
         
         text += f"🏆 РЕКОМЕНДУЕМЫЙ ВАРИАНТ: {station['network']} {station['name']} ({calc['distance']:.1f} км)\n"
-        text += f"💰 Цена: {calc['base_price']:.2f} → {calc['final_price']:.2f} BYN/л\n"
+        text += f"💰 Цена: {calc['base_price']:.2f} → {calc['final_price']:.2f} BYN/л"
+        if calc.get('total_discount_percent', 0) > 0:
+            text += f" (скидка {calc['total_discount_percent']:.1f}%)"
+        text += "\n"
         text += f"⏱️ Время в пути: {calc['time_minutes']:.0f} мин\n"
         text += f"🛣️ Расход на дорогу: {calc['fuel_for_trip']:.1f}л ({calc['fuel_cost_for_trip']:.2f} BYN)\n"
         text += f"💸 Полная стоимость: {calc['total_cost']:.2f} BYN\n"

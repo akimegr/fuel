@@ -1,15 +1,20 @@
 """
 Расчетный движок для вычисления полной стоимости заправки
 """
-from typing import Dict, Any
+from typing import Dict, Any, List
 from data.stations import get_all_stations
+from services.discount_service import DiscountService
 
 
 class FuelCalculator:
     """Калькулятор полной стоимости заправки"""
     
-    def calculate(self, user: Dict[str, Any], station: Dict[str, Any], 
-                  liters: float, fuel_type: str) -> Dict[str, Any]:
+    def __init__(self):
+        self.discount_service = DiscountService()
+    
+    async def calculate(self, user: Dict[str, Any], station: Dict[str, Any], 
+                       liters: float, fuel_type: str, 
+                       user_discounts: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Рассчитывает полную стоимость заправки с учетом:
         - Цены топлива
@@ -32,9 +37,38 @@ class FuelCalculator:
         if base_price == 0:
             return None
         
-        # Применяем скидку по карте (если есть)
-        discount = station.get("discount_card", 0) / 100
-        final_price = base_price * (1 - discount)
+        # Получаем дисконты пользователя, если не переданы
+        if user_discounts is None:
+            user_id = user.get("user_id")
+            if user_id:
+                user_discounts = await self.discount_service.get_user_discounts(user_id)
+            else:
+                user_discounts = []
+        
+        # Применяем дисконты пользователя
+        discount_calc = self.discount_service.calculate_total_discount(
+            user_discounts, base_price
+        )
+        
+        # Также учитываем скидку АЗС (если есть)
+        azs_discount = station.get("discount_card", 0) / 100
+        azs_discounted_price = base_price * (1 - azs_discount)
+        
+        # Итоговая цена: применяем пользовательские дисконты к цене АЗС
+        # Если есть скидка АЗС, применяем к ней пользовательские дисконты
+        if azs_discount > 0:
+            # Применяем пользовательские дисконты к уже скидочной цене АЗС
+            final_discount_calc = self.discount_service.calculate_total_discount(
+                user_discounts, azs_discounted_price
+            )
+            final_price = final_discount_calc["final_price"]
+            total_user_discount = final_discount_calc["total_discount_percent"]
+        else:
+            final_price = discount_calc["final_price"]
+            total_user_discount = discount_calc["total_discount_percent"]
+        
+        # Общая скидка (АЗС + пользователь)
+        total_discount_percent = azs_discount * 100 + total_user_discount
         
         # Стоимость топлива
         fuel_cost = final_price * liters
@@ -75,6 +109,9 @@ class FuelCalculator:
         return {
             "station": station,
             "base_price": base_price,
+            "azs_discount": azs_discount * 100,
+            "user_discount": total_user_discount,
+            "total_discount_percent": total_discount_percent,
             "final_price": final_price,
             "fuel_cost": fuel_cost,
             "distance": distance,
@@ -84,7 +121,9 @@ class FuelCalculator:
             "time_cost": time_cost,
             "total_cost": total_cost,
             "savings": savings,
-            "liters": liters
+            "liters": liters,
+            "discount_breakdown": discount_calc.get("breakdown", {}),
+            "applied_discounts": discount_calc.get("applied_discounts", [])
         }
     
     def _get_nearest_station(self) -> Dict[str, Any]:

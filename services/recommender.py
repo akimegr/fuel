@@ -12,8 +12,8 @@ class RecommendationEngine:
     def __init__(self):
         self.calculator = FuelCalculator()
     
-    def get_recommendations(self, user: Dict[str, Any], liters: float, 
-                           fuel_type: str) -> Dict[str, Any]:
+    async def get_recommendations(self, user: Dict[str, Any], liters: float, 
+                                  fuel_type: str) -> Dict[str, Any]:
         """
         Генерация рекомендаций в зависимости от категории водителя
         
@@ -30,19 +30,19 @@ class RecommendationEngine:
         
         if driver_type == "regular":
             # Для обычных - ДВА варианта
-            return self._get_dual_recommendations(user, stations, liters, fuel_type)
+            return await self._get_dual_recommendations(user, stations, liters, fuel_type)
         else:
             # Для остальных - ОДИН лучший
-            return self._get_single_recommendation(user, stations, liters, fuel_type)
+            return await self._get_single_recommendation(user, stations, liters, fuel_type)
     
-    def _get_dual_recommendations(self, user: Dict[str, Any], 
-                                  stations: List[Dict[str, Any]], 
-                                  liters: float, fuel_type: str) -> Dict[str, Any]:
+    async def _get_dual_recommendations(self, user: Dict[str, Any], 
+                                       stations: List[Dict[str, Any]], 
+                                       liters: float, fuel_type: str) -> Dict[str, Any]:
         """Двойная рекомендация для обычных водителей"""
         
         calculations = []
         for station in stations:
-            calc = self.calculator.calculate(user, station, liters, fuel_type)
+            calc = await self.calculator.calculate(user, station, liters, fuel_type)
             if calc:
                 balance_type = user.get("preferred_balance", "balanced")
                 value_score = self.calculator.calculate_value_score(calc, balance_type)
@@ -71,14 +71,14 @@ class RecommendationEngine:
             "has_dual": True
         }
     
-    def _get_single_recommendation(self, user: Dict[str, Any], 
-                                   stations: List[Dict[str, Any]], 
-                                   liters: float, fuel_type: str) -> Dict[str, Any]:
+    async def _get_single_recommendation(self, user: Dict[str, Any], 
+                                         stations: List[Dict[str, Any]], 
+                                         liters: float, fuel_type: str) -> Dict[str, Any]:
         """Одна рекомендация для других категорий"""
         
         calculations = []
         for station in stations:
-            calc = self.calculator.calculate(user, station, liters, fuel_type)
+            calc = await self.calculator.calculate(user, station, liters, fuel_type)
             if calc:
                 driver_type = user.get("driver_type", "regular")
                 

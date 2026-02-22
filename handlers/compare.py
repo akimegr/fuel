@@ -43,7 +43,7 @@ async def cmd_compare(message: Message):
     
     calculations = []
     for station in stations:
-        calc = calculator.calculate(user, station, liters, fuel_type)
+        calc = await calculator.calculate(user, station, liters, fuel_type)
         if calc:
             calculations.append((station, calc))
     
@@ -61,8 +61,10 @@ async def cmd_compare(message: Message):
     
     for idx, (station, calc) in enumerate(calculations, 1):
         text += f"{idx}. {station['network']} {station['name']}\n"
-        text += f"   💰 {calc['final_price']:.2f} BYN/л | "
-        text += f"📍 {calc['distance']:.1f} км | "
+        text += f"   💰 {calc['base_price']:.2f} → {calc['final_price']:.2f} BYN/л"
+        if calc.get('total_discount_percent', 0) > 0:
+            text += f" (скидка {calc['total_discount_percent']:.1f}%)"
+        text += f"\n   📍 {calc['distance']:.1f} км | "
         text += f"💸 {calc['total_cost']:.2f} BYN\n"
         text += f"   ⏱️ {calc['time_minutes']:.0f} мин | "
         text += f"🛣️ {calc['fuel_for_trip']:.1f}л на дорогу\n\n"

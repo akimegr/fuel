@@ -55,6 +55,34 @@ async def init_db():
             )
         """)
         
+        # Таблица дисконтов (справочник всех доступных дисконтов)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS discounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                discount_percent REAL NOT NULL,
+                apply_rule TEXT DEFAULT 'additive',
+                description TEXT,
+                is_active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Таблица связи пользователей с дисконтами
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS user_discounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                discount_id INTEGER NOT NULL,
+                is_active INTEGER DEFAULT 1,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id),
+                FOREIGN KEY (discount_id) REFERENCES discounts(id),
+                UNIQUE(user_id, discount_id)
+            )
+        """)
+        
         # Индексы для ускорения запросов
         await db.execute("""
             CREATE INDEX IF NOT EXISTS idx_prices_azs_fuel 
@@ -69,6 +97,16 @@ async def init_db():
         await db.execute("""
             CREATE INDEX IF NOT EXISTS idx_azs_city 
             ON azs(city)
+        """)
+        
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_discounts_user 
+            ON user_discounts(user_id)
+        """)
+        
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_discounts_type 
+            ON discounts(type)
         """)
         
         await db.commit()
@@ -149,6 +187,7 @@ async def init_db():
         
         # Добавляем начальные данные, если база пуста
         await add_initial_azs(db)
+        await add_initial_discounts(db)
 
 
 async def add_initial_azs(db):
@@ -182,5 +221,40 @@ async def add_initial_azs(db):
         INSERT INTO azs (network, address, city, lat, lon)
         VALUES (?, ?, ?, ?, ?)
     """, initial_azs)
+    await db.commit()
+
+
+async def add_initial_discounts(db):
+    """Добавление начальных дисконтов в справочник"""
+    # Проверяем, есть ли уже данные
+    cursor = await db.execute("SELECT COUNT(*) FROM discounts")
+    count = await cursor.fetchone()
+    if count[0] > 0:
+        return
+    
+    # Список доступных дисконтов
+    initial_discounts = [
+        # Банковские карты (складываются между собой)
+        ('Альфа-Банк карта', 'bank', 5.0, 'additive', 'Кешбек 5% на топливо'),
+        ('Беларусбанк карта', 'bank', 3.0, 'additive', 'Кешбек 3% на топливо'),
+        ('Приорбанк карта', 'bank', 4.0, 'additive', 'Кешбек 4% на топливо'),
+        ('БПС-Сбербанк карта', 'bank', 2.5, 'additive', 'Кешбек 2.5% на топливо'),
+        
+        # Карты АЗС (складываются между собой)
+        ('А100 карта', 'azs', 3.0, 'additive', 'Скидка 3% по карте А100'),
+        ('Лукойл карта', 'azs', 2.0, 'additive', 'Скидка 2% по карте Лукойл'),
+        ('Газпром карта', 'azs', 2.5, 'additive', 'Скидка 2.5% по карте Газпром'),
+        ('Shell карта', 'azs', 2.0, 'additive', 'Скидка 2% по карте Shell'),
+        
+        # Промокоды/акции (берется только максимальный, не складываются)
+        ('Акция выходного дня', 'promo', 5.0, 'max', 'Акция: скидка 5% в выходные'),
+        ('Промокод новичка', 'promo', 7.0, 'max', 'Промокод для новых клиентов'),
+        ('Акция первой заправки', 'promo', 10.0, 'max', 'Скидка 10% на первую заправку'),
+    ]
+    
+    await db.executemany("""
+        INSERT INTO discounts (name, type, discount_percent, apply_rule, description)
+        VALUES (?, ?, ?, ?, ?)
+    """, initial_discounts)
     await db.commit()
 

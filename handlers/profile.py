@@ -9,7 +9,10 @@ from aiogram.fsm.state import State, StatesGroup
 
 from database.crud import get_or_create_user, update_user_profile
 from keyboards.balance_kb import get_balance_keyboard
+from services.discount_service import DiscountService
 from config import DRIVER_TYPES, BALANCE_TYPES, DEFAULT_TIME_VALUES
+
+discount_service = DiscountService()
 
 router = Router()
 
@@ -40,6 +43,16 @@ async def cmd_profile(message: Message):
     
     text += f"📏 Макс. расстояние: {user.get('max_willing_distance', 10.0):.1f} км\n"
     text += f"⏰ Стоимость времени: {user.get('time_value', 10.0):.0f} BYN/час\n"
+    
+    # Показываем дисконты
+    user_discounts = await discount_service.get_user_discounts(message.from_user.id)
+    if user_discounts:
+        total_discount = sum(d["discount_percent"] for d in user_discounts)
+        text += f"\n💳 Активных дисконтов: {len(user_discounts)} (итого {total_discount:.1f}%)\n"
+        text += f"Просмотр: /discounts"
+    else:
+        text += f"\n💳 Дисконты не добавлены\n"
+        text += f"Добавить: /discounts_list"
     
     text += f"\n📝 Редактировать: /profile_edit"
     
